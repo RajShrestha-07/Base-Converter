@@ -4,7 +4,7 @@ Base Converter is a small web app that converts numbers between decimal, binary,
 
 Live demo: https://YOUR-USERNAME.github.io/Base-Converter/
 
-Built with: HTML, CSS and JavaScript. Created with help from Claude (AI).
+Built with: HTML, CSS and JavaScript.
 
 What this project shows: A number can be written in different bases, but the value stays the same. Computers store everything in base 2, programmers often write it in base 16 because each hex digit equals exactly 4 bits, and people use base 10. The app also has shift buttons: shifting bits left multiplies by 2, and shifting right divides by 2. It shows the ASCII character for the number too, and the signed 32-bit value, which is how a computer reads the top bit as a negative sign.
 
