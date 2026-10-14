@@ -1,0 +1,180 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Base Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: four linked number fields (binary, octal, decimal, hex) above a 32-bit register of clickable LEDs in four byte groups. */
+:root {
+  --paper: #eef1f4; --card: #ffffff; --ink: #14233a; --muted: #5c6b80; --line: #cdd5df;
+  --off: #dde3ea; --on: #e8452c; --glow: rgba(232, 69, 44, 0.35); --bad: #b3261e;
+  --accent: #14233a; --accent-ink: #eef1f4;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1826; --card: #17233a; --ink: #e7ecf4; --muted: #93a2ba; --line: #2a3a56;
+    --off: #243450; --on: #ffb02e; --glow: rgba(255, 176, 46, 0.4); --bad: #ff8a80;
+    --accent: #e7ecf4; --accent-ink: #0f1826; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1826; --card: #17233a; --ink: #e7ecf4; --muted: #93a2ba; --line: #2a3a56;
+  --off: #243450; --on: #ffb02e; --glow: rgba(255, 176, 46, 0.4); --bad: #ff8a80;
+  --accent: #e7ecf4; --accent-ink: #0f1826; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 14px; line-height: 1.5;
+  padding-inline: 16px; padding-block: 28px 56px;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 28px 28px; background-position: -1px -1px;
+}
+main { max-width: 880px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 8vw, 3.2rem); line-height: 1; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 800; font-size: 1.5rem; margin: 0; }
+p { margin: 0; color: var(--muted); max-width: 62ch; }
+label, .cap { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--on); outline-offset: 2px; }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field input {
+  font: 600 1.1rem var(--mono); color: var(--ink); background: var(--card);
+  border: 2px solid var(--ink); border-radius: 4px; padding: 9px 12px; width: 100%; min-width: 0; text-transform: uppercase;
+}
+.field input.bad { border-color: var(--bad); }
+.msg { min-height: 1.3em; font-size: 12px; color: var(--bad); }
+
+.reg { display: flex; flex-wrap: wrap; gap: 14px; }
+.grp { display: flex; flex-direction: column; gap: 4px; }
+.leds { display: flex; gap: 4px; }
+.led { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); background: var(--off); padding: 0; transition: background 0.12s, box-shadow 0.12s; }
+.led[aria-pressed="true"] { background: var(--on); border-color: var(--on); box-shadow: 0 0 9px 2px var(--glow); }
+.gl { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { font-weight: 600; padding: 8px 14px; color: var(--ink); background: var(--card); border: 2px solid var(--ink); border-radius: 4px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; font-variant-numeric: tabular-nums; }
+.facts b { font-weight: 600; }
+@media (max-width: 560px) { .led { width: 24px; height: 24px; } .leds { gap: 3px; } }
+@media (prefers-reduced-motion: reduce) { .led { transition: none; } }
+</style>
+
+<main>
+  <div class="panel">
+    <h1>Base Converter</h1>
+    <p>Computers count in 2s, programmers write in 16s, people count in 10s. Type in any box and the rest follow. You can also tap the lights.</p>
+  </div>
+
+  <section class="panel" aria-label="Number fields">
+    <div class="fields">
+      <div class="field"><label for="f10">Decimal (base 10)</label><input id="f10" inputmode="numeric" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="f2">Binary (base 2)</label><input id="f2" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="f16">Hex (base 16)</label><input id="f16" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label for="f8">Octal (base 8)</label><input id="f8" autocomplete="off" spellcheck="false"></div>
+    </div>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+
+  <section class="panel" aria-label="32-bit register">
+    <h2>32-bit register</h2>
+    <div class="reg" id="reg"></div>
+    <div class="row">
+      <button class="btn" id="clear" type="button">Clear</button>
+      <button class="btn" id="shl" type="button">Shift left ×2</button>
+      <button class="btn" id="shr" type="button">Shift right ÷2</button>
+      <button class="btn" id="max" type="button">Set 255</button>
+    </div>
+    <div class="facts" id="facts"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var MAX = 4294967295;
+  var val = 202; // example starting value
+  var $ = function (id) { return document.getElementById(id); };
+  var fields = { 10: $("f10"), 2: $("f2"), 16: $("f16"), 8: $("f8") };
+  var msg = $("msg");
+
+  var reg = $("reg");
+  var bitBtns = [];
+  for (var g = 0; g < 4; g++) {
+    var grp = document.createElement("div"); grp.className = "grp";
+    var leds = document.createElement("div"); leds.className = "leds";
+    var gl = document.createElement("div"); gl.className = "gl";
+    gl.textContent = "byte " + (3 - g) + " (bits " + (31 - g * 8) + "-" + (24 - g * 8) + ")";
+    for (var i = 0; i < 8; i++) {
+      (function (bit) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "led"; b.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-label", "Bit " + bit);
+        b.addEventListener("click", function () {
+          val = toggle(val, bit);
+          update(null);
+        });
+        bitBtns[bit] = b;
+        leds.appendChild(b);
+      })(31 - (g * 8 + i));
+    }
+    grp.appendChild(leds); grp.appendChild(gl); reg.appendChild(grp);
+  }
+  function toggle(v, bit) {
+    var p = Math.pow(2, bit);
+    return Math.floor(v / p) % 2 === 1 ? v - p : v + p;
+  }
+
+  var patterns = { 10: /^[0-9]+$/, 2: /^[01]+$/, 16: /^[0-9A-F]+$/, 8: /^[0-7]+$/ };
+  Object.keys(fields).forEach(function (k) {
+    var base = Number(k);
+    fields[k].addEventListener("input", function () {
+      var s = fields[k].value.replace(/[\s_]/g, "").toUpperCase();
+      if (s === "") { val = 0; update(base, true); return; }
+      if (!patterns[base].test(s)) { fields[k].className = "bad"; msg.textContent = "That box only accepts base " + base + " digits."; return; }
+      var n = parseInt(s, base);
+      if (n > MAX) { fields[k].className = "bad"; msg.textContent = "Too big. This register holds up to 4,294,967,295 (32 bits)."; return; }
+      val = n; update(base);
+    });
+  });
+
+  function grouped(s, size) {
+    var out = [];
+    while (s.length > 0) { out.unshift(s.slice(-size)); s = s.slice(0, -size); }
+    return out.join(" ");
+  }
+
+  function update(skipBase, blank) {
+    msg.textContent = "";
+    Object.keys(fields).forEach(function (k) {
+      var base = Number(k);
+      fields[k].className = "";
+      if (base === skipBase) return;
+      var s = val.toString(base).toUpperCase();
+      if (base === 2) s = grouped(s, 4);
+      fields[k].value = s;
+    });
+    if (blank) { fields[skipBase].value = ""; }
+    for (var b = 0; b < 32; b++) {
+      var on = Math.floor(val / Math.pow(2, b)) % 2 === 1;
+      bitBtns[b].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    var signed = val >= 2147483648 ? val - 4294967296 : val;
+    var ch = (val >= 32 && val <= 126) ? String.fromCharCode(val) : "none";
+    var ones = val.toString(2).replace(/0/g, "").length;
+    $("facts").innerHTML =
+      "<span>ASCII character: <b></b></span><span>Lit bits: <b>" + ones + "</b></span><span>As signed 32-bit: <b>" + signed.toLocaleString("en-US") + "</b></span>";
+    $("facts").querySelector("b").textContent = ch;
+  }
+
+  $("clear").addEventListener("click", function () { val = 0; update(null); });
+  $("max").addEventListener("click", function () { val = 255; update(null); });
+  $("shl").addEventListener("click", function () { val = (val * 2) % 4294967296; update(null); });
+  $("shr").addEventListener("click", function () { val = Math.floor(val / 2); update(null); });
+
+  update(null);
+})();
+</script>
+
+</body></html>
